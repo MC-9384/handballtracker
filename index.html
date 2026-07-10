@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d9480f">
+<title>Handball-Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{
+  --bg:#f7f4f1; --card:#ffffff; --text:#26211d; --muted:#8a7f76;
+  --accent:#d9480f; --accent-soft:#fdeee5; --border:#e8e0d9;
+  --green:#2b8a3e; --yellow:#e6b800; --red:#c92a2a; --blue:#1c5d99;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#191512; --card:#242019; --text:#f0eae4; --muted:#9c9186;
+    --accent:#f0692a; --accent-soft:#3a251a; --border:#3a332c; }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);
+  padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+header{background:var(--accent);color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));
+  position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px}
+header h1{font-size:1.15rem;font-weight:700}
+main{max-width:640px;margin:0 auto;padding:14px}
+h2{font-size:1.05rem;margin:18px 2px 10px}
+h2:first-child{margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px}
+.muted{color:var(--muted);font-size:.85rem}
+.row{display:flex;gap:10px;align-items:center}
+.row>*{flex:1}
+label{display:block;font-size:.8rem;color:var(--muted);margin:10px 0 4px;font-weight:600}
+input[type=text],input[type=date],input[type=number],textarea{
+  width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;
+  background:var(--bg);color:var(--text);font-size:1rem;font-family:inherit}
+textarea{min-height:64px;resize:vertical}
+button{font-family:inherit;cursor:pointer}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border:none;
+  border-radius:11px;font-size:.95rem;font-weight:600;background:var(--accent);color:#fff}
+.btn.sec{background:var(--accent-soft);color:var(--accent)}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn.danger{background:transparent;border:1px solid var(--border);color:var(--red)}
+.btn.wide{width:100%;margin-top:10px}
+.btn.small{padding:7px 11px;font-size:.82rem;border-radius:9px}
+.seg{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.seg button{flex:1;padding:9px 4px;border:none;background:var(--card);color:var(--muted);font-size:.85rem;font-weight:600}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button.on.g{background:var(--green)}
+.seg button.on.y{background:var(--yellow);color:#3a2f00}
+.seg button.on.r{background:var(--red)}
+/* Ereignisliste */
+.ev{display:flex;align-items:center;gap:12px}
+.ev .ico{font-size:1.5rem}
+.ev .info{flex:1;min-width:0}
+.ev .title{font-weight:700}
+.ev .actions{display:flex;gap:6px}
+.badge{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:7px;
+  padding:2px 7px;font-size:.75rem;font-weight:700;margin-left:6px}
+/* Spielerinnen-Zeilen */
+.prow{border-bottom:1px solid var(--border);padding:8px 0}
+.prow:last-child{border-bottom:none}
+.phead{display:flex;width:100%;align-items:center;gap:8px;background:none;border:none;color:var(--text);
+  font-size:.98rem;padding:6px 2px;text-align:left}
+.phead b{flex:0 0 auto}
+.psum{flex:1;color:var(--muted);font-size:.82rem;text-align:right}
+.pbody{padding:6px 2px 4px}
+.step{display:flex;align-items:center;justify-content:space-between;margin:6px 0}
+.step span{font-size:.9rem}
+.ctr{display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ctr button{width:42px;height:36px;border:none;background:var(--bg);color:var(--accent);font-size:1.25rem;font-weight:700}
+.ctr b{width:38px;text-align:center;font-size:1rem}
+.cards{display:flex;gap:8px;margin-top:8px}
+.tgl{flex:1;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-weight:600;font-size:.85rem}
+.tgl.on-y{background:var(--yellow);border-color:var(--yellow);color:#3a2f00}
+.tgl.on-r{background:var(--red);border-color:var(--red);color:#fff}
+/* Sterne */
+.stars{display:flex;gap:2px}
+.stars button{background:none;border:none;font-size:1.45rem;color:var(--border);padding:2px}
+.stars button.on{color:var(--yellow)}
+.stars.big button{font-size:1.9rem}
+/* Tabellen */
+table{width:100%;border-collapse:collapse;font-size:.87rem}
+th,td{padding:7px 6px;text-align:center;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-size:.75rem;font-weight:700}
+td:first-child,th:first-child{text-align:left}
+tr:last-child td{border-bottom:none}
+.scroll-x{overflow-x:auto}
+/* Navigation */
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);
+  display:flex;z-index:10;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:9px 4px 7px;background:none;border:none;color:var(--muted);font-size:.72rem;font-weight:600;
+  display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button .nico{font-size:1.35rem}
+nav button.on{color:var(--accent)}
+.newbtns{display:flex;gap:10px;margin-bottom:14px}
+.newbtns .btn{flex:1;padding:14px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--text);color:var(--bg);
+  padding:10px 18px;border-radius:12px;font-size:.9rem;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50}
+.toast.show{opacity:1}
+.kadrow{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)}
+.kadrow:last-child{border-bottom:none}
+.kadrow b{flex:1}
+.kadrow b.off{color:var(--muted);text-decoration:line-through}
+.empty{text-align:center;padding:30px 10px;color:var(--muted)}
+.formfoot{display:flex;gap:10px;margin-top:14px}
+.formfoot .btn{flex:1}
+</style>
+</head>
+<body>
+<header><span style="font-size:1.4rem">🤾‍♀️</span><h1>Handball-Tracker</h1></header>
+<main id="view"></main>
+<nav id="nav">
+  <button data-v="events" onclick="go('events')"><span class="nico">📋</span>Ereignisse</button>
+  <button data-v="stats" onclick="go('stats')"><span class="nico">📊</span>Statistik</button>
+  <button data-v="kader" onclick="go('kader')"><span class="nico">👥</span>Kader</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const KEY = "handballtracker-v1";
+const DEFAULT_PLAYERS = ["Ask","Carla","Feli","Greta","Gurke","Hanna","Ida","Kira","Maya","Mayla","Melia","Mina","Mona","Nele","Sarah"];
+const TAGE = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && Array.isArray(s.players)) return s; }catch(e){}
+  return { players: DEFAULT_PLAYERS.map(n => ({id:uid(), name:n, active:true})), events: [] };
+}
+function persist(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+let state = load();
+let view = "events";
+let draft = null;
+
+function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function today(){ const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){
+  if(!iso) return "–";
+  const d = new Date(iso + "T12:00:00");
+  return TAGE[d.getDay()] + ", " + String(d.getDate()).padStart(2,"0") + "." + String(d.getMonth()+1).padStart(2,"0") + "." + d.getFullYear();
+}
+function fmtDateShort(iso){
+  if(!iso) return "–";
+  const p = iso.split("-"); return p[2] + "." + p[1] + "." + p[0];
+}
+function activePlayers(){ return state.players.filter(p => p.active); }
+function playerName(id){ const p = state.players.find(p => p.id === id); return p ? p.name : "?"; }
+function stars(n){ return "★".repeat(n) + "☆".repeat(5-n); }
+function num(v){ const n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+/* ---------- Navigation ---------- */
+function go(v){
+  if((view === "spiel" || view === "training") && v !== view && draft){
+    // Formular verlassen ohne Speichern
+    draft = null;
+  }
+  view = v; render(); window.scrollTo(0,0);
+}
+function render(){
+  document.querySelectorAll("nav button").forEach(b => {
+    b.classList.toggle("on", b.dataset.v === view || (b.dataset.v === "events" && (view === "spiel" || view === "training")));
+  });
+  const el = document.getElementById("view");
+  if(view === "events") el.innerHTML = eventsView();
+  else if(view === "stats") el.innerHTML = statsView();
+  else if(view === "kader") el.innerHTML = kaderView();
+  else if(view === "spiel") el.innerHTML = spielForm();
+  else if(view === "training") el.innerHTML = trainingForm();
+}
+
+/* ---------- Ereignisliste ---------- */
+function eventsView(){
+  const evs = [...state.events].sort((a,b) => (b.date||"").localeCompare(a.date||""));
+  let html = `<div class="newbtns">
+    <button class="btn" onclick="newSpiel()">🤾 Neues Spiel</button>
+    <button class="btn sec" onclick="newTraining()">🏋️ Neues Training</button>
+  </div>`;
+  if(!evs.length){
+    html += `<div class="empty">Noch keine Ereignisse.<br>Lege oben ein Spiel oder Training an.</div>`;
+    return html;
+  }
+  html += evs.map(ev => {
+    let title, sub;
+    if(ev.type === "spiel"){
+      const erg = (ev.toreWir !== "" && ev.toreGegner !== "") ? `<span class="badge">${esc(ev.toreWir)}:${esc(ev.toreGegner)}</span>` : "";
+      title = `🤾 ${esc(ev.gegner || "Spiel")} (${esc(ev.ort)})${erg}`;
+      sub = fmtDate(ev.date);
+    } else {
+      const bw = ev.bewertung ? `<span class="badge">${stars(ev.bewertung).slice(0, 5)}</span>` : "";
+      title = `🏋️ Training${bw}`;
+      const anz = Object.values(ev.spieler || {}).filter(s => s.anw === "A").length;
+      sub = fmtDate(ev.date) + ` · ${anz} anwesend`;
+    }
+    return `<div class="card ev">
+      <div class="info" onclick="editEvent('${ev.id}')" style="cursor:pointer">
+        <div class="title">${title}</div>
+        <div class="muted">${sub}</div>
+      </div>
+      <div class="actions">
+        <button class="btn sec small" onclick="exportMd('${ev.id}')">📄 MD</button>
+        <button class="btn danger small" onclick="delEvent('${ev.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join("");
+  return html;
+}
+function delEvent(id){
+  const ev = state.events.find(e => e.id === id);
+  const name = ev.type === "spiel" ? `Spiel gegen ${ev.gegner || "?"}` : `Training am ${fmtDateShort(ev.date)}`;
+  if(!confirm(`${name} wirklich löschen?`)) return;
+  state.events = state.events.filter(e => e.id !== id);
+  persist(); render();
+}
+
+/* ---------- Spiel-Formular ---------- */
+function blankSp(){ return {tore:0, m7:0, m7f:0, zwei:0, gelb:0, rot:0}; }
+function newSpiel(){
+  draft = {id:uid(), type:"spiel", date:today(), gegner:"", ort:"Heim",
+    toreWir:"", toreGegner:"", hzWir:"", hzGegner:"",
+    spieler:{}, beste:"", gut:"", verbesserung:"", fazit:""};
+  activePlayers().forEach(p => draft.spieler[p.id] = blankSp());
+  go("spiel");
+}
+function spielForm(){
+  const d = draft;
+  const isNew = !state.events.some(e => e.id === d.id);
+  const pids = playerIdsForDraft();
+  return `
+  <h2>${isNew ? "Neues Spiel" : "Spiel bearbeiten"}</h2>
+  <div class="card">
+    <label>Gegner</label>
+    <input type="text" value="${esc(d.gegner)}" placeholder="z.B. ATV Biesel" oninput="draft.gegner=this.value">
+    <div class="row">
+      <div><label>Datum</label><input type="date" value="${esc(d.date)}" oninput="draft.date=this.value"></div>
+      <div><label>Ort</label>
+        <div class="seg">
+          <button class="${d.ort==='Heim'?'on':''}" onclick="draft.ort='Heim';render()">Heim</button>
+          <button class="${d.ort==='Auswärts'?'on':''}" onclick="draft.ort='Auswärts';render()">Auswärts</button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Tore wir</label><input type="number" min="0" inputmode="numeric" value="${esc(d.toreWir)}" oninput="draft.toreWir=this.value"></div>
+      <div><label>Tore Gegner</label><input type="number" min="0" inputmode="numeric" value="${esc(d.toreGegner)}" oninput="draft.toreGegner=this.value"></div>
+    </div>
+    <div class="row">
+      <div><label>Halbzeit wir (optional)</label><input type="number" min="0" inputmode="numeric" value="${esc(d.hzWir)}" oninput="draft.hzWir=this.value"></div>
+      <div><label>Halbzeit Gegner</label><input type="number" min="0" inputmode="numeric" value="${esc(d.hzGegner)}" oninput="draft.hzGegner=this.value"></div>
+    </div>
+  </div>
+
+  <h2>Spielerinnen <span class="muted">(antippen zum Erfassen)</span></h2>
+  <div class="card">
+    ${pids.map(pid => spielerRow(pid)).join("")}
+  </div>
+
+  <h2>Notizen</h2>
+  <div class="card">
+    <label>Beste Spielerinnen</label>
+    <input type="text" value="${esc(d.beste)}" oninput="draft.beste=this.value">
+    <label>Was lief gut</label>
+    <textarea oninput="draft.gut=this.value">${esc(d.gut)}</textarea>
+    <label>Verbesserungspunkte</label>
+    <textarea oninput="draft.verbesserung=this.value">${esc(d.verbesserung)}</textarea>
+    <label>Fazit</label>
+    <textarea oninput="draft.fazit=this.value">${esc(d.fazit)}</textarea>
+  </div>
+  <div class="formfoot">
+    <button class="btn ghost" onclick="draft=null;go('events')">Abbrechen</button>
+    <button class="btn" onclick="saveDraft()">💾 Speichern</button>
+  </div>`;
+}
+function playerIdsForDraft(){
+  // aktive Spielerinnen zuerst (Kaderreihenfolge), danach inaktive mit vorhandenen Daten
+  const ids = activePlayers().map(p => p.id).filter(id => draft.spieler[id]);
+  Object.keys(draft.spieler).forEach(id => { if(!ids.includes(id)) ids.push(id); });
+  return ids;
+}
+function spielerRow(pid){
+  const s = draft.spieler[pid];
+  const open = draft._open === pid;
+  return `<div class="prow">
+    <button class="phead" onclick="draft._open = draft._open==='${pid}' ? null : '${pid}'; render()">
+      <b>${esc(playerName(pid))}</b>
+      <span class="psum" id="sum-${pid}">${spSummary(s)}</span>
+      <span>${open ? "▴" : "▾"}</span>
+    </button>
+    ${open ? `<div class="pbody">
+      ${stepRow(pid,"tore","⚽ Feldtore")}
+      ${stepRow(pid,"m7","7m verwandelt")}
+      ${stepRow(pid,"m7f","7m verworfen")}
+      ${stepRow(pid,"zwei","⏱ 2 Minuten")}
+      <div class="cards">
+        <button class="tgl ${s.gelb?'on-y':''}" onclick="tglCard('${pid}','gelb')">🟨 Gelbe Karte</button>
+        <button class="tgl ${s.rot?'on-r':''}" onclick="tglCard('${pid}','rot')">🟥 Rote Karte</button>
+      </div>
+    </div>` : ""}
+  </div>`;
+}
+function stepRow(pid, k, label){
+  const v = draft.spieler[pid][k];
+  return `<div class="step"><span>${label}</span>
+    <div class="ctr">
+      <button onclick="stp('${pid}','${k}',-1)">−</button>
+      <b id="v-${pid}-${k}">${v}</b>
+      <button onclick="stp('${pid}','${k}',1)">+</button>
+    </div></div>`;
+}
+function stp(pid, k, d){
+  const s = draft.spieler[pid];
+  s[k] = Math.max(0, s[k] + d);
+  document.getElementById(`v-${pid}-${k}`).textContent = s[k];
+  document.getElementById(`sum-${pid}`).innerHTML = spSummary(s);
+}
+function tglCard(pid, k){
+  const s = draft.spieler[pid];
+  s[k] = s[k] ? 0 : 1;
+  render();
+}
+function spSummary(s){
+  const parts = [];
+  const tot = s.tore + s.m7;
+  if(tot) parts.push(`⚽ ${tot}`);
+  if(s.m7 || s.m7f) parts.push(`7m ${s.m7}/${s.m7 + s.m7f}`);
+  if(s.zwei) parts.push(`2'×${s.zwei}`);
+  if(s.gelb) parts.push("🟨");
+  if(s.rot) parts.push("🟥");
+  return parts.join(" · ") || "–";
+}
+
+/* ---------- Trainings-Formular ---------- */
+function newTraining(){
+  draft = {id:uid(), type:"training", date:today(), bewertung:0, gut:"", schlecht:"", spieler:{}};
+  activePlayers().forEach(p => draft.spieler[p.id] = {anw:"A", bew:0, notiz:""});
+  go("training");
+}
+function trainingForm(){
+  const d = draft;
+  const isNew = !state.events.some(e => e.id === d.id);
+  const pids = playerIdsForDraft();
+  return `
+  <h2>${isNew ? "Neues Training" : "Training bearbeiten"}</h2>
+  <div class="card">
+    <label>Datum</label>
+    <input type="date" value="${esc(d.date)}" oninput="draft.date=this.value">
+  </div>
+
+  <h2>Anwesenheit &amp; Bewertung</h2>
+  <div class="card" id="trows">
+    ${pids.map(pid => trainRow(pid)).join("")}
+  </div>
+
+  <h2>Trainingsfazit</h2>
+  <div class="card">
+    <label>Bewertung des Trainings</label>
+    <div class="stars big">${[1,2,3,4,5].map(n =>
+      `<button class="${d.bewertung >= n ? 'on' : ''}" onclick="setGBew(${n})">★</button>`).join("")}</div>
+    <label>Was lief gut</label>
+    <textarea oninput="draft.gut=this.value">${esc(d.gut)}</textarea>
+    <label>Was lief nicht</label>
+    <textarea oninput="draft.schlecht=this.value">${esc(d.schlecht)}</textarea>
+  </div>
+  <div class="formfoot">
+    <button class="btn ghost" onclick="draft=null;go('events')">Abbrechen</button>
+    <button class="btn" onclick="saveDraft()">💾 Speichern</button>
+  </div>`;
+}
+function trainRow(pid){
+  const s = draft.spieler[pid];
+  return `<div class="prow" id="trow-${pid}">
+    <div class="row" style="align-items:center">
+      <b style="flex:1">${esc(playerName(pid))}</b>
+      <div class="seg" style="flex:0 0 170px">
+        <button class="${s.anw==='A'?'on g':''}" onclick="setAnw('${pid}','A')">Da</button>
+        <button class="${s.anw==='E'?'on y':''}" onclick="setAnw('${pid}','E')">Entsch.</button>
+        <button class="${s.anw==='U'?'on r':''}" onclick="setAnw('${pid}','U')">Fehlt</button>
+      </div>
+    </div>
+    ${s.anw === "A" ? `
+    <div class="row" style="margin-top:6px">
+      <div class="stars" style="flex:0 0 auto">${[1,2,3,4,5].map(n =>
+        `<button class="${s.bew >= n ? 'on' : ''}" onclick="setBew('${pid}',${n})">★</button>`).join("")}</div>
+      <input type="text" placeholder="Notiz (optional)" value="${esc(s.notiz)}" oninput="draft.spieler['${pid}'].notiz=this.value" style="flex:1">
+    </div>` : ""}
+  </div>`;
+}
+function setAnw(pid, v){
+  draft.spieler[pid].anw = v;
+  document.getElementById(`trow-${pid}`).outerHTML = trainRow(pid);
+}
+function setBew(pid, n){
+  const s = draft.spieler[pid];
+  s.bew = (s.bew === n) ? 0 : n;
+  document.getElementById(`trow-${pid}`).outerHTML = trainRow(pid);
+}
+function setGBew(n){
+  draft.bewertung = (draft.bewertung === n) ? 0 : n;
+  render();
+}
+
+/* ---------- Speichern / Bearbeiten ---------- */
+function editEvent(id){
+  const ev = state.events.find(e => e.id === id);
+  draft = JSON.parse(JSON.stringify(ev));
+  activePlayers().forEach(p => {
+    if(!draft.spieler[p.id]) draft.spieler[p.id] = ev.type === "spiel" ? blankSp() : {anw:"A", bew:0, notiz:""};
+  });
+  go(ev.type === "spiel" ? "spiel" : "training");
+}
+function saveDraft(){
+  if(!draft.date){ toast("Bitte Datum angeben"); return; }
+  if(draft.type === "spiel" && !draft.gegner.trim()){ toast("Bitte Gegner angeben"); return; }
+  delete draft._open;
+  const i = state.events.findIndex(e => e.id === draft.id);
+  if(i >= 0) state.events[i] = draft; else state.events.push(draft);
+  persist();
+  draft = null;
+  go("events");
+  toast("Gespeichert ✓");
+}
+
+/* ---------- Markdown-Export ---------- */
+function mdName(s){ return String(s).replace(/\|/g, "/"); }
+function mdSpiel(ev){
+  const erg = (ev.toreWir !== "" && ev.toreGegner !== "") ? `**${ev.toreWir}:${ev.toreGegner}**` : "–";
+  const hz = (ev.hzWir !== "" && ev.hzGegner !== "") ? `${ev.hzWir}:${ev.hzGegner}` : "";
+  let md = `# 🤾 Spiel: ${ev.gegner} (${ev.ort})
+
+## 📋 Spiel-Info
+
+| Info | Details |
+|------|---------|
+| **Gegner** | ${ev.gegner} |
+| **Datum** | ${fmtDate(ev.date)} |
+| **Ort** | ${ev.ort} |
+| **Ergebnis** | ${erg} |
+`;
+  if(hz) md += `| **Halbzeit** | ${hz} |\n`;
+  md += `\n---\n\n## 📊 Spielerinnen-Statistik\n\n`;
+  const rows = Object.entries(ev.spieler)
+    .map(([pid, s]) => ({name: playerName(pid), s}))
+    .filter(r => r.s.tore || r.s.m7 || r.s.m7f || r.s.zwei || r.s.gelb || r.s.rot)
+    .sort((a,b) => (b.s.tore + b.s.m7) - (a.s.tore + a.s.m7));
+  if(rows.length){
+    md += `| Spielerin | Tore | davon 7m | 7m verworfen | 2 min | 🟨 | 🟥 |\n|---|---|---|---|---|---|---|\n`;
+    const t = {tore:0, m7:0, m7f:0, zwei:0, gelb:0, rot:0};
+    rows.forEach(r => {
+      const s = r.s;
+      t.tore += s.tore + s.m7; t.m7 += s.m7; t.m7f += s.m7f; t.zwei += s.zwei; t.gelb += s.gelb; t.rot += s.rot;
+      md += `| ${mdName(r.name)} | ${s.tore + s.m7} | ${s.m7 || "–"} | ${s.m7f || "–"} | ${s.zwei || "–"} | ${s.gelb ? "🟨" : "–"} | ${s.rot ? "🟥" : "–"} |\n`;
+    });
+    md += `| **Gesamt** | **${t.tore}** | **${t.m7}** | **${t.m7f}** | **${t.zwei}** | **${t.gelb}** | **${t.rot}** |\n`;
+  } else {
+    md += `*Keine Einzelstatistiken erfasst.*\n`;
+  }
+  md += `\n---\n\n## 📝 Notizen\n\n`;
+  md += `- **Beste Spielerinnen:** ${ev.beste || "–"}\n`;
+  md += `- **Was lief gut:** ${ev.gut || "–"}\n`;
+  md += `- **Verbesserungspunkte:** ${ev.verbesserung || "–"}\n`;
+  md += `- **Fazit:** ${ev.fazit || "–"}\n`;
+  md += `\n---\n\n*Erstellt mit Handball-Tracker am ${fmtDateShort(today())}*\n`;
+  return md;
+}
+function mdTraining(ev){
+  const groups = {A: [], E: [], U: []};
+  Object.entries(ev.spieler).forEach(([pid, s]) => { (groups[s.anw] || groups.U).push({name: playerName(pid), s}); });
+  const gesamt = Object.keys(ev.spieler).length;
+  let md = `# 🏋️ Training: ${fmtDate(ev.date)}
+
+## 📋 Info
+
+| Info | Details |
+|------|---------|
+| **Datum** | ${fmtDate(ev.date)} |
+| **Trainingsbewertung** | ${ev.bewertung ? stars(ev.bewertung) + ` (${ev.bewertung}/5)` : "–"} |
+| **Anwesend** | ${groups.A.length} von ${gesamt} |
+
+---
+
+## ✅ Anwesenheit
+
+- **Anwesend (${groups.A.length}):** ${groups.A.map(r => r.name).join(", ") || "–"}
+- **Entschuldigt (${groups.E.length}):** ${groups.E.map(r => r.name).join(", ") || "–"}
+- **Unentschuldigt (${groups.U.length}):** ${groups.U.map(r => r.name).join(", ") || "–"}
+
+---
+
+## ⭐ Spielerinnen-Bewertung
+
+`;
+  const bewertete = groups.A.filter(r => r.s.bew || r.s.notiz);
+  if(bewertete.length){
+    md += `| Spielerin | Bewertung | Notiz |\n|---|---|---|\n`;
+    bewertete.forEach(r => {
+      md += `| ${mdName(r.name)} | ${r.s.bew ? stars(r.s.bew) + ` (${r.s.bew})` : "–"} | ${mdName(r.s.notiz) || "–"} |\n`;
+    });
+  } else {
+    md += `*Keine Einzelbewertungen erfasst.*\n`;
+  }
+  md += `\n---\n\n## 📝 Trainingsfazit\n\n`;
+  md += `- **Was lief gut:** ${ev.gut || "–"}\n`;
+  md += `- **Was lief nicht:** ${ev.schlecht || "–"}\n`;
+  md += `\n---\n\n*Erstellt mit Handball-Tracker am ${fmtDateShort(today())}*\n`;
+  return md;
+}
+function mdFor(ev){
+  return ev.type === "spiel"
+    ? {md: mdSpiel(ev), name: `${ev.date} Spiel ${ev.gegner} (${ev.ort}).md`}
+    : {md: mdTraining(ev), name: `${ev.date} Training.md`};
+}
+async function exportMd(id){
+  const ev = state.events.find(e => e.id === id);
+  const {md, name} = mdFor(ev);
+  const safe = name.replace(/[\\/:*?"<>|]/g, "-");
+  try{
+    const file = new File([md], safe, {type: "text/markdown"});
+    if(navigator.canShare && navigator.canShare({files: [file]})){
+      await navigator.share({files: [file], title: safe});
+      return;
+    }
+  }catch(e){ if(e.name === "AbortError") return; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([md], {type: "text/markdown;charset=utf-8"}));
+  a.download = safe;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("MD-Datei heruntergeladen");
+}
+
+/* ---------- Statistik ---------- */
+function statsView(){
+  const games = state.events.filter(e => e.type === "spiel");
+  const trainings = state.events.filter(e => e.type === "training");
+  let html = "";
+
+  // Bilanz
+  let s = 0, u = 0, n = 0;
+  games.forEach(g => {
+    if(g.toreWir === "" || g.toreGegner === "") return;
+    const w = num(g.toreWir), o = num(g.toreGegner);
+    if(w > o) s++; else if(w === o) u++; else n++;
+  });
+  html += `<h2>Saison-Bilanz</h2><div class="card">
+    <div class="row" style="text-align:center">
+      <div><div style="font-size:1.5rem;font-weight:800;color:var(--green)">${s}</div><div class="muted">Siege</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800">${u}</div><div class="muted">Unentsch.</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${n}</div><div class="muted">Niederl.</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${games.length}</div><div class="muted">Spiele</div></div>
+    </div></div>`;
+
+  // Spielstatistik pro Spielerin
+  const gstat = {};
+  games.forEach(g => Object.entries(g.spieler || {}).forEach(([pid, sp]) => {
+    if(!gstat[pid]) gstat[pid] = {tore:0, m7:0, m7f:0, zwei:0, gelb:0, rot:0};
+    const t = gstat[pid];
+    t.tore += sp.tore + sp.m7; t.m7 += sp.m7; t.m7f += sp.m7f; t.zwei += sp.zwei; t.gelb += sp.gelb; t.rot += sp.rot;
+  }));
+  const grows = Object.entries(gstat)
+    .filter(([,t]) => t.tore || t.m7f || t.zwei || t.gelb || t.rot)
+    .sort((a,b) => b[1].tore - a[1].tore);
+  html += `<h2>Torschützinnen (alle Spiele)</h2><div class="card scroll-x">`;
+  if(grows.length){
+    html += `<table><tr><th>Spielerin</th><th>Tore</th><th>7m</th><th>7m ✗</th><th>2 min</th><th>🟨</th><th>🟥</th></tr>`;
+    grows.forEach(([pid, t]) => {
+      html += `<tr><td>${esc(playerName(pid))}</td><td><b>${t.tore}</b></td><td>${t.m7 || "–"}</td><td>${t.m7f || "–"}</td><td>${t.zwei || "–"}</td><td>${t.gelb || "–"}</td><td>${t.rot || "–"}</td></tr>`;
+    });
+    html += `</table>`;
+  } else html += `<div class="muted">Noch keine Spieldaten.</div>`;
+  html += `</div>`;
+
+  // Trainingsstatistik
+  const tstat = {};
+  trainings.forEach(t => Object.entries(t.spieler || {}).forEach(([pid, sp]) => {
+    if(!tstat[pid]) tstat[pid] = {da:0, ges:0, bewSum:0, bewN:0};
+    const x = tstat[pid];
+    x.ges++;
+    if(sp.anw === "A"){ x.da++; if(sp.bew){ x.bewSum += sp.bew; x.bewN++; } }
+  }));
+  const trows = Object.entries(tstat).sort((a,b) => (b[1].da / b[1].ges) - (a[1].da / a[1].ges));
+  html += `<h2>Trainingsbeteiligung</h2><div class="card scroll-x">`;
+  if(trows.length){
+    html += `<table><tr><th>Spielerin</th><th>Anwesend</th><th>Quote</th><th>Ø Bewertung</th></tr>`;
+    trows.forEach(([pid, x]) => {
+      const q = Math.round(100 * x.da / x.ges);
+      const avg = x.bewN ? (x.bewSum / x.bewN).toFixed(1) : "–";
+      html += `<tr><td>${esc(playerName(pid))}</td><td>${x.da}/${x.ges}</td><td><b>${q}%</b></td><td>${avg}</td></tr>`;
+    });
+    html += `</table>`;
+  } else html += `<div class="muted">Noch keine Trainingsdaten.</div>`;
+  html += `</div>`;
+  return html;
+}
+
+/* ---------- Kader ---------- */
+function kaderView(){
+  let html = `<h2>Kader</h2><div class="card">`;
+  html += state.players.map(p => `
+    <div class="kadrow">
+      <b class="${p.active ? "" : "off"}">${esc(p.name)}</b>
+      <button class="btn ghost small" onclick="renamePlayer('${p.id}')">✏️</button>
+      <button class="btn ${p.active ? "ghost" : "sec"} small" onclick="togglePlayer('${p.id}')">${p.active ? "deaktivieren" : "aktivieren"}</button>
+    </div>`).join("");
+  html += `</div>
+  <div class="card">
+    <label>Neue Spielerin</label>
+    <div class="row">
+      <input type="text" id="newplayer" placeholder="Name">
+      <button class="btn small" style="flex:0 0 auto" onclick="addPlayer()">+ Hinzufügen</button>
+    </div>
+  </div>
+  <h2>Daten</h2>
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px">Alle Daten liegen nur auf diesem Gerät. Regelmäßig ein Backup exportieren!</div>
+    <div class="row">
+      <button class="btn sec" onclick="backupExport()">⬇ Backup exportieren</button>
+      <button class="btn ghost" onclick="document.getElementById('impfile').click()">⬆ Backup importieren</button>
+    </div>
+    <input type="file" id="impfile" accept=".json" style="display:none" onchange="backupImport(this)">
+  </div>`;
+  return html;
+}
+function addPlayer(){
+  const el = document.getElementById("newplayer");
+  const name = el.value.trim();
+  if(!name) return;
+  state.players.push({id:uid(), name, active:true});
+  persist(); render();
+}
+function renamePlayer(id){
+  const p = state.players.find(p => p.id === id);
+  const name = prompt("Neuer Name:", p.name);
+  if(name && name.trim()){ p.name = name.trim(); persist(); render(); }
+}
+function togglePlayer(id){
+  const p = state.players.find(p => p.id === id);
+  p.active = !p.active;
+  persist(); render();
+}
+function backupExport(){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], {type: "application/json"}));
+  a.download = `handballtracker-backup-${today()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("Backup heruntergeladen");
+}
+function backupImport(input){
+  const f = input.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const s = JSON.parse(r.result);
+      if(!s || !Array.isArray(s.players) || !Array.isArray(s.events)) throw new Error("bad");
+      if(!confirm(`Backup mit ${s.players.length} Spielerinnen und ${s.events.length} Ereignissen importieren? Aktuelle Daten werden ersetzt.`)) return;
+      state = s; persist(); render(); toast("Backup importiert ✓");
+    }catch(e){ toast("Ungültige Backup-Datei"); }
+  };
+  r.readAsText(f);
+  input.value = "";
+}
+
+/* ---------- Start ---------- */
+render();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
