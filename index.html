@@ -107,6 +107,14 @@ nav button.on{color:var(--accent)}
 .empty{text-align:center;padding:30px 10px;color:var(--muted)}
 .formfoot{display:flex;gap:10px;margin-top:14px}
 .formfoot .btn{flex:1}
+/* Trainingseinheiten */
+.chk{width:36px;height:36px;border-radius:10px;border:2px solid var(--border);background:var(--card);color:#fff;font-size:1.1rem;font-weight:800}
+.chk.on{background:var(--green);border-color:var(--green)}
+.exname{flex:1;display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--text);font-size:.93rem;padding:6px 0;text-align:left;min-width:0}
+.exname b.done{color:var(--muted)}
+.exdesc{font-size:.88rem;line-height:1.5;margin:8px 0;white-space:pre-line}
+.exerw{font-size:.85rem;line-height:1.45;background:var(--accent-soft);color:var(--accent);border-radius:9px;padding:8px 10px;margin:8px 0}
+.backrow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -114,6 +122,7 @@ nav button.on{color:var(--accent)}
 <main id="view"></main>
 <nav id="nav">
   <button data-v="events" onclick="go('events')"><span class="nico">📋</span>Ereignisse</button>
+  <button data-v="einheiten" onclick="go('einheiten')"><span class="nico">🗂</span>Einheiten</button>
   <button data-v="stats" onclick="go('stats')"><span class="nico">📊</span>Statistik</button>
   <button data-v="kader" onclick="go('kader')"><span class="nico">👥</span>Kader</button>
 </nav>
@@ -127,8 +136,8 @@ const TAGE = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","S
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function load(){
-  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && Array.isArray(s.players)) return s; }catch(e){}
-  return { players: DEFAULT_PLAYERS.map(n => ({id:uid(), name:n, active:true})), events: [] };
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && Array.isArray(s.players)){ if(!s.units) s.units = {}; return s; } }catch(e){}
+  return { players: DEFAULT_PLAYERS.map(n => ({id:uid(), name:n, active:true})), events: [], units: {} };
 }
 function persist(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 
@@ -167,10 +176,13 @@ function go(v){
 }
 function render(){
   document.querySelectorAll("nav button").forEach(b => {
-    b.classList.toggle("on", b.dataset.v === view || (b.dataset.v === "events" && (view === "spiel" || view === "training")));
+    b.classList.toggle("on", b.dataset.v === view || (b.dataset.v === "events" && (view === "spiel" || view === "training"))
+      || (b.dataset.v === "einheiten" && view === "unit"));
   });
   const el = document.getElementById("view");
   if(view === "events") el.innerHTML = eventsView();
+  else if(view === "einheiten") el.innerHTML = einheitenView();
+  else if(view === "unit") el.innerHTML = unitView();
   else if(view === "stats") el.innerHTML = statsView();
   else if(view === "kader") el.innerHTML = kaderView();
   else if(view === "spiel") el.innerHTML = spielForm();
@@ -520,6 +532,9 @@ function mdFor(ev){
 async function exportMd(id){
   const ev = state.events.find(e => e.id === id);
   const {md, name} = mdFor(ev);
+  await shareOrDownload(md, name);
+}
+async function shareOrDownload(md, name){
   const safe = name.replace(/[\\/:*?"<>|]/g, "-");
   try{
     const file = new File([md], safe, {type: "text/markdown"});
@@ -533,6 +548,342 @@ async function exportMd(id){
   a.download = safe;
   document.body.appendChild(a); a.click(); a.remove();
   toast("MD-Datei heruntergeladen");
+}
+
+/* ---------- Trainingseinheiten: Inhalte ---------- */
+const UNITS = [
+{
+  id:"te-zweikampf", group:"te",
+  titel:"Zweikampf & Entscheidungstraining",
+  sub:"Ausgearbeitete TE · erstellt 20.07.2026",
+  dauer:"90–95 min · ganze Halle",
+  ziel:"Das 1 gegen 1 offensiv gewinnen — und direkt danach unter Druck die richtige Entscheidung treffen (selbst abschließen oder ablegen). In der Abwehr: aktiv verteidigen, Angreiferin abdrängen, kein Stoppfoul.",
+  material:"ca. 10 Markierungsscheiben/Hütchen, 1 Turnbank, 2 kleine Turnkisten + 1 Stab, 2 Bodenplättchen, 2 Stangen, 2 kleine Turnmatten, Bälle, Pfeife, Stoppuhr",
+  hinweise:"Rotation: Alle durchlaufen beide Rollen (Angriff/Abwehr) und mehrere Positionen — keine Spezialisierung.\nBelastung: 2b und 2c sind intensiv — Paar-/Gruppengrößen so wählen, dass Pausen entstehen; Trinkpausen nach Block 2 und 3.\nKontrolle: 3b und das Zielspiel sind die Kontrollübungen — gelingen dort Tore über gewonnene Zweikämpfe und richtiges Ablegen, war der Schwerpunkt erfolgreich. Wenn nicht: nächstes Training erleichtert wiederholen (größere Zonen, halbaktive Abwehr).",
+  ex:[
+  {id:"z1a", name:"1a · Einlaufen & Mobilisieren", dauer:"ca. 8 min",
+   desc:"Lauf-ABC-Formen mit Ball (Prellen in Bewegung, Handwechsel), dazu Mobilisation Schulter/Hüfte.\nDanach Passen in Paaren in der Bewegung (beidhändig annehmen, aus dem Lauf passen)."},
+  {id:"z1b", name:"1b · Spiegellauf mit Umschaltspiel", dauer:"12–15 min",
+   desc:"Mit 6 Markierungsscheiben zwei aneinanderliegende Felder markieren („links“/„rechts“), je 1 Spielerin mit Ball pro Feld.\nSpielerin 1 macht Bewegungen vor, Spielerin 2 spiegelt sie.\nTrainer ruft „links“ oder „rechts“ → die Gerufene wird Angreiferin und sucht den Abschluss; die andere passt ihren Ball zum Trainer und verteidigt sofort.\nMehrere Felder parallel aufbauen, damit alle ständig in Aktion sind.",
+   erwartung:"Sofort umschalten — die Abwehrspielerin kommt VOR der Angreiferin in die Position zwischen Gegnerin und Tor.",
+   quelle:"Katalog: 07 Zweikampf · Spiegellauf mit Umschaltspiel.pdf"},
+  {id:"z2a", name:"2a · Torwart einwerfen aus der Stoßbewegung", dauer:"ca. 8 min",
+   desc:"Spielerinnen auf leicht nach innen verlagertem RL und RR, eine Anspielerin zentral an 9 m.\nRL stößt an, passt zur Anspielerin, zieht sich zurück; RR startet in die Stoßbewegung, passt zur parallelstoßenden RL → Abschluss nach Vorgabe. Danach seitenverkehrt.\nWurfvorgaben nach Ansage (hoch/flach, lange/kurze Ecke), damit die Torhüterinnen gezielt eingeworfen werden.",
+   quelle:"Katalog: Torwart · Torwart einwerfen aus der Stoßbewegung.pdf"},
+  {id:"z2b", name:"2b · 1 gegen 1 nach Vorübung", dauer:"ca. 11 min",
+   desc:"Angreiferin: Prell-Slalom durch 4 Hütchen → prellend über die Turnbank (Ball mind. 1× auf der Bank aufprellen) → Pass zum Trainer → freilaufen → Rückpass → Abschluss suchen.\nAbwehrspielerin (parallel): 2× über die Stange springen und darunter zurückkrabbeln → einbeinig links um Hütchen 1, einbeinig rechts um Hütchen 2 → dann eingreifen: Ball herausprellen oder Abschluss verhindern.\nNach jeder Runde Rollentausch, dann neue Paare. Laufwege so abstimmen, dass die Verteidigerin eine echte Chance hat.",
+   erwartung:"Angreiferin nimmt nach der Ballannahme sofort Tempo Richtung Tor auf (kein Querlaufen); Abwehrspielerin greift den Ball an, ohne zu klammern.",
+   quelle:"Katalog: 07 Zweikampf · 1 vs. 1 nach Vorübung.pdf (★★)"},
+  {id:"z2c", name:"2c · Abdrängen nach außen — Mannschaftswettkampf", dauer:"ca. 11 min",
+   desc:"Mit 2 Bodenplättchen drei Abschlusssektoren markieren. Angreiferinnen starten an der Mittellinie, Abwehrspielerinnen an der Torauslinie.\nAuf Pfiff: Angreiferin versucht prellend vorbeizulaufen und abzuschließen; Abwehrspielerin drängt sie mit schneller Beinarbeit nach außen — OHNE Stoppfoul.\nPunkte: Tor aus dem Mittelsektor = 2, Tor aus den Außensektoren = 1, Stoppfoul der Abwehr = 2 Punkte für den Angriff.\nNach dem Abschluss abklatschen → nächstes Paar startet. 2 Minuten pro Team oder feste Angriffszahl — welches Team holt mehr Punkte?",
+   erwartung:"Abwehr verteidigt mit den Beinen (Gebot 1), drängt in den schlechten Wurfwinkel und foult nicht.",
+   quelle:"Katalog: 07 Zweikampf · Abdrängen nach außen.pdf (★)"},
+  {id:"z3a", name:"3a · 1 gegen 1 mit Entscheidungsverhalten", dauer:"ca. 10 min",
+   desc:"Außen links/rechts besetzt; je eine Abwehrspielerin hinten und je eine vorgezogene auf halb (~12 m); übrige Spielerinnen mit Ball auf HL/HR.\nHalbspielerin legt sich den Ball vor, spielt 1 gegen 1 gegen die Vorgezogene, danach Entscheidung unter Druck:\n– Tritt die hintere Abwehrspielerin heraus → Ablegen auf Außen, Außen schließt ab.\n– Verstellt sie den Passweg nach außen → selbst abschließen.\nErleichtern: Vorgezogene verteidigt halbaktiv. Erschweren: hintere Abwehrspielerin agiert später.",
+   erwartung:"Blick nach der 1-gegen-1-Aktion sofort zum Tor/zur Abwehr — die Entscheidung folgt aus dem Abwehrverhalten, nicht aus dem eigenen Plan.",
+   quelle:"Katalog: 09 kooperatives Spiel · 1 gegen 1 mit anschließendem Entscheidungsverhalten.pdf"},
+  {id:"z3b", name:"3b · Entscheidungstraining im 3 gegen 3", dauer:"ca. 10 min",
+   desc:"Feld mit 2 Stangen in zwei Hälften teilen; pro Seite 3 Abwehrspielerinnen; Angreiferinnen besetzen alle Positionen, je 1 Kreisläuferin pro Sektor, Bälle auf RL und RR.\nRM ist Anspielerin. Bei jedem Pass zur Mitte muss die zugeordnete Abwehrspielerin die Stange berühren → die Angreiferin nutzt den kurzfristigen Vorteil und macht sofort Druck.\nNach dem Rückpass 3 gegen 3 bis zum Abschluss, dann Seitenwechsel.\nVereinfachung für den Einstieg: erst als 2-gegen-1-Vorstufe (Stoßen an der Matte vorbei, Pendelbewegung, dann Entscheidung Ablegen vs. eigener Abschluss).",
+   erwartung:"Pässe zur Mitte bewusst als Auslöser nutzen; wer den Ball bekommt, greift die Lücke druckvoll an, bevor die Abwehr formiert ist.",
+   quelle:"Katalog: 09 kooperatives Spiel · 3vs3 Entscheidungstraining.pdf (★★★)"},
+  {id:"z4", name:"4 · Zielspiel 5 gegen 5", dauer:"ca. 15 min",
+   desc:"5 gegen 5 (+ Torhüterin) über das ganze Feld, Abwehr offensiv-aktiv (Manndeckung oder 1:5).\nBonusregeln:\n– Tor nach gewonnenem 1 gegen 1 = 2 Punkte.\n– Tor nach richtigem Ablegen auf die freie Mitspielerin (Abwehr war herausgetreten) = 2 Punkte.\n– Stoppfoul der Abwehr = Punkt für den Angriff.",
+   erwartung:"Jede Angreiferin sucht mindestens einmal aktiv das 1 gegen 1; die Abwehr verteidigt aktiv nach vorn statt abwartend."},
+  {id:"z5", name:"5 · Abschluss: Wurfwettbewerb", dauer:"ca. 5 min",
+   desc:"Wurfwettbewerb als Mannschaftswettkampf (z.B. Zielwerfen auf Ecken), Ausklang und gemeinsames Aufräumen. Optional."}
+  ]
+},
+{
+  id:"kw30a", group:"ferien",
+  titel:"KW 30 A — Stärken-Check: Technik-Diagnostik",
+  sub:"Einheit A (Technik) · 20.–26.07.",
+  dauer:"90 min",
+  kader:"Fast voller Kader, beide Trainer — es fehlt nur Kira.",
+  ziel:"Technik-Diagnostik als Stationsbetrieb. Pro Spielerin notieren: 1 Stärke, die wir in den Ferien ausbauen (→ Spielerprofile ergänzen).",
+  ex:[
+  {id:"a1", name:"Station 1 · Werfen", desc:"Würfe auf Ziele/Ecken (z.B. Zielfelder im Tor). Beobachten: Wurftechnik und Platzierung."},
+  {id:"a2", name:"Station 2 · Passen & Fangen", desc:"Beidhändig annehmen, verschiedene Passarten, auch unter leichtem Zeitdruck."},
+  {id:"a3", name:"Station 3 · Prellen", desc:"Prellen mit der schwachen Hand, Richtungswechsel, Blick vom Ball lösen."},
+  {id:"a4", name:"Station 4 · 1v1-Grundform", desc:"1 gegen 1 auf Hütchentor oder Torabschluss — Durchsetzung und Täuschungen beobachten."},
+  {id:"a5", name:"Ask: Feld-Grundausbildung (Start)", desc:"Passen, Fangen, Wurfauslage — sie beginnt fast bei null, Fortschritt lobend begleiten."}
+  ]
+},
+{
+  id:"kw30b", group:"ferien",
+  titel:"KW 30 B — Fitness-Baseline",
+  sub:"Einheit B (Fitness) · 20.–26.07.",
+  dauer:"90 min",
+  kader:"Fast voller Kader, beide Trainer — es fehlt nur Kira.",
+  ziel:"Fitness-Baseline für den Retest in KW 35 — alle Ergebnisse notieren!",
+  ex:[
+  {id:"b1", name:"Linienläufe auf Zeit", desc:"Zeiten pro Spielerin notieren (gleiches Protokoll wie beim Retest in KW 35)."},
+  {id:"b2", name:"Plank-Halten", desc:"Maximale Haltezeit notieren."},
+  {id:"b3", name:"Standweitsprung", desc:"Bester Versuch aus 3, Weite notieren."},
+  {id:"b4", name:"6-Minuten-Lauf", desc:"Zurückgelegte Strecke notieren."},
+  {id:"b5", name:"Ausdauer-Spielform", desc:"Zum Abschluss eine laufintensive Spielform (Freude am Spiel)."}
+  ]
+},
+{
+  id:"kw31a", group:"ferien",
+  titel:"KW 31 A — Technik-Zirkel (einfach & bekannt)",
+  sub:"Einheit A (Technik) · 27.07.–02.08.",
+  dauer:"90 min",
+  kader:"⚠️ Sven allein. Es fehlen Kira (bis 30.07.), Sarah, Carla.",
+  ziel:"Technik-Zirkel mit bekannten Übungen — selbsterklärende Stationen, wenig Korrekturbedarf.",
+  hinweise:"Gurke: klare Einzelaufgabe pro Einheit (z.B. „3 Ballgewinne in der Abwehr“) — Biss einfordern, direkt loben.",
+  ex:[
+  {id:"a1", name:"Zirkel · Passen & Fangen", desc:"Bekannte Passformen aus dem Training, Stationen selbsterklärend aufbauen."},
+  {id:"a2", name:"Zirkel · Dribbling", desc:"Bekannte Prell-/Dribbling-Stationen (Slalom, Handwechsel, Tempowechsel)."},
+  {id:"a3", name:"Fokus-Duo: Mona & Mina", desc:"Technik-Grundlagen mit vielen Wiederholungen und Aufmerksamkeit — die Wochen mit kleinem Kader sind ihre Chance."}
+  ]
+},
+{
+  id:"kw31b", group:"ferien",
+  titel:"KW 31 B — Ausdauer über Spielformen",
+  sub:"Einheit B (Fitness) · 27.07.–02.08.",
+  dauer:"90 min",
+  kader:"⚠️ Sven allein. Es fehlen Kira (bis 30.07.), Sarah, Carla.",
+  ziel:"Ausdauer über Spielformen (RTK) statt stumpfem Laufen.",
+  ex:[
+  {id:"b1", name:"3v3/4v4-Dauerturnier", desc:"Auf verkleinertem Feld, kurze Spielzeiten, rollierende Teams — hohe Laufintensität."},
+  {id:"b2", name:"Körpergewichts-Zirkel", desc:"Identisch mit Urlaubs-Workout 1 — so kennen ihn alle (auch die Urlauberinnen machen ihn unterwegs)."}
+  ]
+},
+{
+  id:"kw32a", group:"ferien",
+  titel:"KW 32 A — Wurf-Grundlagen",
+  sub:"Einheit A (Technik) · 03.–09.08.",
+  dauer:"90 min",
+  kader:"⚠️ Sven allein (bis 07.08.). Es fehlen Kira (ab 04.08.), Sarah, Carla (bis 07.08.).",
+  ziel:"Schlagwurf und Sprungwurf mit einfachen Zielaufgaben festigen.",
+  hinweise:"Ida: vor jedem Wurf laut ansagen, wo die Torhüterin steht — Wurfplatzierung statt „einfach drauf“.",
+  ex:[
+  {id:"a1", name:"Schlagwurf mit Zielaufgaben", desc:"Ecken treffen (Zielfelder im Tor), saubere Wurfauslage."},
+  {id:"a2", name:"Sprungwurf mit Zielaufgaben", desc:"Absprung, Bogenspannung, Zielvorgabe je Durchgang (lange/kurze Ecke, hoch/flach)."}
+  ]
+},
+{
+  id:"kw32b", group:"ferien",
+  titel:"KW 32 B — Athletik & MAPS",
+  sub:"Einheit B (Fitness) · 03.–09.08.",
+  dauer:"90 min",
+  kader:"⚠️ Sven allein (bis 07.08.). Es fehlen Kira (ab 04.08.), Sarah, Carla (bis 07.08.).",
+  ziel:"Athletik-Schwerpunkt mit MAPS-orientiertem Zirkel.",
+  hinweise:"Maya: Kondition ist ihr Entwicklungsfeld — kleine erreichbare Ziele setzen, Durchhalten loben (Resilienz!).",
+  ex:[
+  {id:"b1", name:"MAPS-Zirkel", desc:"Mobilisation, Rumpfstabilität, Sprünge, Prävention Sprunggelenk/Schulter."},
+  {id:"b2", name:"Kurze Sprints", desc:"Kurze Distanzen mit vollständigen Pausen, Start aus verschiedenen Positionen."},
+  {id:"b3", name:"Mayla: TW-Block (mit Birte)", desc:"Freie Bälle & Durchbruch-Situationen in einfacher Form — viele Wiederholungen, Erfolgserlebnisse."}
+  ]
+},
+{
+  id:"kw33a", group:"ferien",
+  titel:"⭐ KW 33 A — Individuelle Technik-Aufträge",
+  sub:"Einheit A (Technik) · 10.–16.08. · Schwerpunktwoche",
+  dauer:"90 min",
+  kader:"Beste Woche der Ferien: nur Kira und Sarah (bis 15.08.) fehlen. Beide Trainer da — echte Einzelkorrektur möglich.",
+  ziel:"Stationstraining mit individuellen Technik-Aufträgen pro Spielerin (Malik: Stärken ausbauen).",
+  hinweise:"Aufträge:\nGreta: 1v1 mit Pflichtkontakt vor dem Abschluss\nHanna: Wurfrepertoire erweitern, Frustmomente aushalten\nNele: 1v1 gegen aggressive Verteidigung — Durchsetzung\nIda: Platzieren statt draufhauen (TW-Blick vor jedem Wurf)\nMelia: Abschlüsse am Kreis aus verschiedenen Anspielen\nCarla: Wurfruhe — fester Ablauf (fangen – stabilisieren – werfen), Tempo raus\nFeli: 1v1 auf die Lücke statt auf die Verteidigerin\nGurke: Abwehr-Aufgaben mit messbarem Ziel, Positionsdisziplin\nMaya: Wurftechnik von Außen, Kondition dosiert\nMina & Mona: Technik-Grundlagen (Passen/Fangen, einfacher Abschluss)\nAsk: Feld-Grundausbildung (Fangen, Passen, Wurfauslage)\nMayla: TW freie Bälle/Durchbruch (mit Birte)",
+  ex:[
+  {id:"a1", name:"Stationstraining mit Einzel-Aufträgen", desc:"Stationen so aufbauen, dass jede Spielerin an ihrem Auftrag arbeitet (siehe Hinweise unten). Zwei Trainer = Einzelkorrektur."}
+  ]
+},
+{
+  id:"kw33b", group:"ferien",
+  titel:"KW 33 B — 1v1-Woche",
+  sub:"Einheit B (Fitness & Spiel) · 10.–16.08.",
+  dauer:"90 min",
+  kader:"Nur Kira und Sarah (bis 15.08.) fehlen. Beide Trainer.",
+  ziel:"1 gegen 1: offensiv angreifen, aktiv verteidigen (RTK).",
+  hinweise:"Hanna: in frustrierenden 1v1-Momenten bewusst begleiten — Emotionsregulation als stilles Wochenziel.",
+  ex:[
+  {id:"b1", name:"1v1 offensiv angreifen", desc:"1v1-Formen mit Tempo Richtung Tor; Feli aufs Stoßen in die Lücke coachen."},
+  {id:"b2", name:"1v1 aktiv verteidigen", desc:"Aktiv nach vorn verteidigen, abdrängen ohne Stoppfoul. Greta & Nele gezielt gegen körperliche Gegenwehr stellen (Zweikampfbereitschaft/Durchsetzung)."}
+  ]
+},
+{
+  id:"kw34a", group:"ferien",
+  titel:"KW 34 A — Technik unter Tempo",
+  sub:"Einheit A (Technik) · 17.–23.08.",
+  dauer:"90 min",
+  kader:"Kira zurück, Sarah noch da (bis 23.08.); ab 22.08. fehlen Nele und Sven → Matthias allein.",
+  ziel:"Grundtechniken unter Tempo (RTK Tempospiel).",
+  hinweise:"Kira nach 4 Wochen Pause dosiert aufbauen, aber als Vorbild/Co-Coach der Stationen einsetzen (Führungsrolle).\nSarah: ihre einzige volle Trainingswoche — Technik-Einzelaufgaben priorisieren.",
+  ex:[
+  {id:"a1", name:"Passen & Fangen im Lauf", desc:"Passkontinuum in Bewegung, Tempo schrittweise steigern."},
+  {id:"a2", name:"1. Welle", desc:"Gegenstoß-Grundformen: Lösen, Sprint, langer Pass, Abschluss."},
+  {id:"a3", name:"Abschluss nach Sprint", desc:"Wurf unter Vorbelastung — erst Sprint/Aufgabe, dann Abschluss."}
+  ]
+},
+{
+  id:"kw34b", group:"ferien",
+  titel:"KW 34 B — Entscheidungstraining Überzahl",
+  sub:"Einheit B (Spiel) · 17.–23.08.",
+  dauer:"90 min",
+  kader:"Kira zurück, Sarah noch da; ab 22.08. Matthias allein.",
+  ziel:"2v1/3v2-Überzahl: werfen oder abspielen? (Ida!)",
+  ex:[
+  {id:"b1", name:"2v1-Überzahl", desc:"Entscheidung Abschluss vs. Pass — die Abwehr bestimmt die Antwort, nicht der eigene Plan."},
+  {id:"b2", name:"3v2-Überzahl", desc:"Steigerung: mehr Optionen, schnellere Entscheidungen."},
+  {id:"b3", name:"Ausdauer-Spielform", desc:"Laufintensive Spielform zum Abschluss."}
+  ]
+},
+{
+  id:"kw35a", group:"ferien",
+  titel:"KW 35 A — Best-of & freies Spiel",
+  sub:"Einheit A (Technik) · 24.–30.08.",
+  dauer:"90 min",
+  kader:"⚠️ Matthias allein. Es fehlen Sarah und Nele (bis 29.08.).",
+  ziel:"Konsolidieren: jede Spielerin zeigt ihre Fokus-Technik, letzte Korrekturen. Danach Freude am Spiel.",
+  ex:[
+  {id:"a1", name:"Best-of der Ferien", desc:"Jede Spielerin zeigt ihre Fokus-Technik aus den individuellen Aufträgen; letzte Korrekturen."},
+  {id:"a2", name:"Freies Spiel", desc:"Freude am Spiel — RTK-Basisgedanke."}
+  ]
+},
+{
+  id:"kw35b", group:"ferien",
+  titel:"KW 35 B — Fitness-Retest",
+  sub:"Einheit B (Fitness) · 24.–30.08.",
+  dauer:"90 min",
+  kader:"⚠️ Matthias allein. Es fehlen Sarah und Nele (bis 29.08.).",
+  ziel:"Retest mit exakt denselben Übungen wie in KW 30 — jede Verbesserung sichtbar machen und feiern (auch bei den Urlaubs-Workout-Rückkehrerinnen). Ergebnisse in die Spielerprofile.",
+  hinweise:"Ausblick Saisonstart: kurzes Teamgespräch, Torhüterinnen-Frage ansprechen (Ask → Feld).",
+  ex:[
+  {id:"b1", name:"Linienläufe auf Zeit", desc:"Gleiches Protokoll wie KW 30, Zeiten vergleichen."},
+  {id:"b2", name:"Plank-Halten", desc:"Haltezeit vs. KW 30."},
+  {id:"b3", name:"Standweitsprung", desc:"Bester Versuch aus 3 vs. KW 30."},
+  {id:"b4", name:"6-Minuten-Lauf", desc:"Strecke vs. KW 30."},
+  {id:"b5", name:"Teamgespräch Saisonstart", desc:"Ergebnisse feiern, Ausblick auf die Saison, Torhüterinnen-Frage."}
+  ]
+}
+];
+
+/* ---------- Trainingseinheiten: Ansichten ---------- */
+let curUnit = null, openEx = null;
+function unitById(id){ return UNITS.find(u => u.id === id); }
+function uprog(unitId){
+  if(!state.units) state.units = {};
+  if(!state.units[unitId]) state.units[unitId] = {ex:{}, bew:0, fazit:""};
+  return state.units[unitId];
+}
+function exprog(unitId, exId){
+  const u = uprog(unitId);
+  if(!u.ex[exId]) u.ex[exId] = {done:0, bew:0, notiz:""};
+  return u.ex[exId];
+}
+function unitStats(u){
+  const p = state.units[u.id];
+  let done = 0, bewSum = 0, bewN = 0;
+  if(p) u.ex.forEach(ex => {
+    const e = p.ex[ex.id];
+    if(e){ if(e.done) done++; if(e.bew){ bewSum += e.bew; bewN++; } }
+  });
+  return {done, total: u.ex.length, avg: bewN ? (bewSum / bewN).toFixed(1) : null};
+}
+function einheitenView(){
+  let html = "";
+  [["te","Ausgearbeitete Trainingseinheiten"],["ferien","Ferien-Trainingsplan Sommer 2026 (KW 30–35)"]].forEach(([g, name]) => {
+    const us = UNITS.filter(u => u.group === g);
+    if(!us.length) return;
+    html += `<h2>${name}</h2>`;
+    html += us.map(u => {
+      const s = unitStats(u);
+      const prog = s.done ? `${s.done}/${s.total} ✓${s.avg ? " · Ø " + s.avg + " ★" : ""}` : `${s.total} ${s.total === 1 ? "Übung" : "Übungen"}`;
+      const badge = (s.total && s.done === s.total) ? ' <span class="badge">✓ durchgeführt</span>' : "";
+      return `<div class="card ev" onclick="openUnit('${u.id}')" style="cursor:pointer">
+        <div class="info">
+          <div class="title">${esc(u.titel)}${badge}</div>
+          <div class="muted">${esc(u.sub)} · ${prog}</div>
+        </div>
+        <span style="color:var(--muted);font-size:1.2rem">›</span>
+      </div>`;
+    }).join("");
+  });
+  return html;
+}
+function unitView(){
+  const u = unitById(curUnit);
+  if(!u){ view = "einheiten"; return einheitenView(); }
+  const p = uprog(u.id);
+  const s = unitStats(u);
+  let html = `<div class="backrow">
+    <button class="btn ghost small" onclick="go('einheiten')">‹ Einheiten</button>
+    <span class="muted" style="font-weight:600">${s.done}/${s.total} Übungen abgehakt</span>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;font-size:1.05rem">${esc(u.titel)}</div>
+    <div class="muted" style="margin-top:2px">${esc(u.sub)} · ${esc(u.dauer)}</div>
+    ${u.kader ? `<div class="exdesc">👥 ${esc(u.kader)}</div>` : ""}
+    ${u.ziel ? `<div class="exdesc">🎯 ${esc(u.ziel)}</div>` : ""}
+    ${u.material ? `<div class="muted" style="margin-top:6px">🧰 ${esc(u.material)}</div>` : ""}
+  </div>
+  <h2>Übungen <span class="muted">(antippen für Details)</span></h2>
+  <div class="card">${u.ex.map(ex => exRow(u, ex)).join("")}</div>`;
+  if(u.hinweise) html += `<h2>Hinweise</h2><div class="card"><div class="exdesc" style="margin:0">${esc(u.hinweise)}</div></div>`;
+  html += `<h2>Fazit zur Einheit</h2>
+  <div class="card">
+    <label>Bewertung der Einheit</label>
+    <div class="stars big">${[1,2,3,4,5].map(n =>
+      `<button class="${p.bew >= n ? "on" : ""}" onclick="setUBew(${n})">★</button>`).join("")}</div>
+    <label>Notiz</label>
+    <textarea oninput="setUFazit(this.value)">${esc(p.fazit)}</textarea>
+  </div>
+  <div class="formfoot">
+    <button class="btn danger" onclick="resetUnit()">↺ Zurücksetzen</button>
+    <button class="btn" onclick="exportUnitMd('${u.id}')">📄 MD-Export</button>
+  </div>`;
+  return html;
+}
+function exRow(u, ex){
+  const p = exprog(u.id, ex.id);
+  const open = openEx === ex.id;
+  return `<div class="prow">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="chk ${p.done ? "on" : ""}" onclick="tglDone('${u.id}','${ex.id}')">${p.done ? "✓" : ""}</button>
+      <button class="exname" onclick="openEx = openEx === '${ex.id}' ? null : '${ex.id}'; render()">
+        <b class="${p.done ? "done" : ""}" style="flex:1">${esc(ex.name)}</b>
+        <span class="muted" style="flex:0 0 auto;font-size:.8rem">${ex.dauer ? esc(ex.dauer) : ""}${p.bew ? " · " + "★".repeat(p.bew) : ""}</span>
+        <span>${open ? "▴" : "▾"}</span>
+      </button>
+    </div>
+    ${open ? `<div class="pbody">
+      <div class="exdesc">${esc(ex.desc)}</div>
+      ${ex.erwartung ? `<div class="exerw">💡 ${esc(ex.erwartung)}</div>` : ""}
+      ${ex.quelle ? `<div class="muted" style="margin-bottom:8px">📎 ${esc(ex.quelle)}</div>` : ""}
+      <div class="row">
+        <div class="stars" style="flex:0 0 auto">${[1,2,3,4,5].map(n =>
+          `<button class="${p.bew >= n ? "on" : ""}" onclick="setExBew('${u.id}','${ex.id}',${n})">★</button>`).join("")}</div>
+        <input type="text" placeholder="Notiz zur Übung (optional)" value="${esc(p.notiz)}" oninput="setExNotiz('${u.id}','${ex.id}',this.value)">
+      </div>
+    </div>` : ""}
+  </div>`;
+}
+function openUnit(id){ curUnit = id; openEx = null; go("unit"); }
+function tglDone(unitId, exId){ const p = exprog(unitId, exId); p.done = p.done ? 0 : 1; persist(); render(); }
+function setExBew(unitId, exId, n){ const p = exprog(unitId, exId); p.bew = (p.bew === n) ? 0 : n; persist(); render(); }
+function setExNotiz(unitId, exId, v){ exprog(unitId, exId).notiz = v; persist(); }
+function setUBew(n){ const p = uprog(curUnit); p.bew = (p.bew === n) ? 0 : n; persist(); render(); }
+function setUFazit(v){ uprog(curUnit).fazit = v; persist(); }
+function resetUnit(){
+  if(!confirm("Alle Haken, Bewertungen und Notizen dieser Einheit zurücksetzen?")) return;
+  delete state.units[curUnit];
+  persist(); render();
+}
+function mdEinheit(u){
+  const p = uprog(u.id), s = unitStats(u);
+  let md = `# 🗂 Trainingseinheit: ${u.titel}\n\n## 📋 Info\n\n| Info | Details |\n|------|---------|\n| **Einheit** | ${u.sub} |\n| **Dauer** | ${u.dauer} |\n| **Durchgeführt am** | ${fmtDate(today())} |\n| **Übungen** | ${s.done} von ${s.total} durchgeführt |\n| **Bewertung** | ${p.bew ? stars(p.bew) + ` (${p.bew}/5)` : "–"} |\n\n`;
+  if(u.ziel) md += `**Ziel:** ${u.ziel}\n\n`;
+  md += `---\n\n## ✅ Übungen\n\n| ✓ | Übung | Dauer | Bewertung | Notiz |\n|---|---|---|---|---|\n`;
+  u.ex.forEach(ex => {
+    const e = p.ex[ex.id] || {done:0, bew:0, notiz:""};
+    md += `| ${e.done ? "✅" : "—"} | ${mdName(ex.name)} | ${ex.dauer || "–"} | ${e.bew ? stars(e.bew) + ` (${e.bew})` : "–"} | ${mdName(e.notiz) || "–"} |\n`;
+  });
+  md += `\n---\n\n## 📝 Fazit\n\n${p.fazit || "–"}\n\n---\n\n*Erstellt mit Handball-Tracker am ${fmtDateShort(today())}*\n`;
+  return md;
+}
+async function exportUnitMd(id){
+  const u = unitById(id);
+  await shareOrDownload(mdEinheit(u), `${today()} Einheit ${u.titel}.md`);
 }
 
 /* ---------- Statistik ---------- */
