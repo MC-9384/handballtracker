@@ -205,12 +205,14 @@ function eventsView(){
     if(ev.type === "spiel"){
       const erg = (ev.toreWir !== "" && ev.toreGegner !== "") ? `<span class="badge">${esc(ev.toreWir)}:${esc(ev.toreGegner)}</span>` : "";
       title = `🤾 ${esc(ev.gegner || "Spiel")} (${esc(ev.ort)})${erg}`;
-      sub = fmtDate(ev.date);
+      const sp = Object.values(ev.spieler || {});
+      sub = fmtDate(ev.date) + (sp.some(s => s.anw) ? ` · ${sp.filter(s => s.anw === "A").length} anwesend` : "");
     } else {
       const bw = ev.bewertung ? `<span class="badge">${stars(ev.bewertung).slice(0, 5)}</span>` : "";
       title = `🏋️ Training${bw}`;
       const anz = Object.values(ev.spieler || {}).filter(s => s.anw === "A").length;
-      sub = fmtDate(ev.date) + ` · ${anz} anwesend`;
+      const nu = (ev.uebungen || []).length;
+      sub = fmtDate(ev.date) + ` · ${anz} anwesend` + (nu ? ` · ${nu} ${nu === 1 ? "Übung" : "Übungen"}` : "");
     }
     return `<div class="card ev">
       <div class="info" onclick="editEvent('${ev.id}')" style="cursor:pointer">
@@ -234,7 +236,7 @@ function delEvent(id){
 }
 
 /* ---------- Spiel-Formular ---------- */
-function blankSp(){ return {tore:0, m7:0, m7f:0, zwei:0, gelb:0, rot:0}; }
+function blankSp(){ return {anw:"A", bew:0, notiz:"", tore:0, m7:0, m7f:0, zwei:0, gelb:0, rot:0}; }
 function newSpiel(){
   draft = {id:uid(), type:"spiel", date:today(), gegner:"", ort:"Heim",
     toreWir:"", toreGegner:"", hzWir:"", hzGegner:"",
@@ -270,7 +272,7 @@ function spielForm(){
     </div>
   </div>
 
-  <h2>Spielerinnen <span class="muted">(antippen zum Erfassen)</span></h2>
+  <h2>Anwesenheit, Bewertung &amp; Statistik <span class="muted">(Namen antippen für Tore &amp; Karten)</span></h2>
   <div class="card">
     ${pids.map(pid => spielerRow(pid)).join("")}
   </div>
@@ -300,13 +302,24 @@ function playerIdsForDraft(){
 function spielerRow(pid){
   const s = draft.spieler[pid];
   const open = draft._open === pid;
-  return `<div class="prow">
-    <button class="phead" onclick="draft._open = draft._open==='${pid}' ? null : '${pid}'; render()">
-      <b>${esc(playerName(pid))}</b>
+  const da = s.anw === "A";
+  return `<div class="prow" id="srow-${pid}">
+    <div class="row" style="align-items:center">
+      <button class="phead" style="flex:1" onclick="toggleOpen('${pid}')">
+        <b>${esc(playerName(pid))}</b><span>${da ? (open ? "▴" : "▾") : ""}</span>
+      </button>
+      <div class="seg" style="flex:0 0 170px">
+        <button class="${s.anw==='A'?'on g':''}" onclick="setSpAnw('${pid}','A')">Da</button>
+        <button class="${s.anw==='E'?'on y':''}" onclick="setSpAnw('${pid}','E')">Entsch.</button>
+        <button class="${s.anw==='U'?'on r':''}" onclick="setSpAnw('${pid}','U')">Fehlt</button>
+      </div>
+    </div>
+    ${da ? `<div class="row" style="margin-top:2px">
+      <div class="stars" style="flex:0 0 auto">${[1,2,3,4,5].map(n =>
+        `<button class="${s.bew >= n ? 'on' : ''}" onclick="setSpBew('${pid}',${n})">★</button>`).join("")}</div>
       <span class="psum" id="sum-${pid}">${spSummary(s)}</span>
-      <span>${open ? "▴" : "▾"}</span>
-    </button>
-    ${open ? `<div class="pbody">
+    </div>` : ""}
+    ${da && open ? `<div class="pbody">
       ${stepRow(pid,"tore","⚽ Feldtore")}
       ${stepRow(pid,"m7","7m verwandelt")}
       ${stepRow(pid,"m7f","7m verworfen")}
@@ -315,8 +328,27 @@ function spielerRow(pid){
         <button class="tgl ${s.gelb?'on-y':''}" onclick="tglCard('${pid}','gelb')">🟨 Gelbe Karte</button>
         <button class="tgl ${s.rot?'on-r':''}" onclick="tglCard('${pid}','rot')">🟥 Rote Karte</button>
       </div>
+      <input type="text" placeholder="Notiz zur Spielerin (optional)" value="${esc(s.notiz)}" oninput="draft.spieler['${pid}'].notiz=this.value" style="margin-top:8px">
     </div>` : ""}
   </div>`;
+}
+function refreshSpRow(pid){ const el = document.getElementById(`srow-${pid}`); if(el) el.outerHTML = spielerRow(pid); }
+function toggleOpen(pid){
+  if(draft.spieler[pid].anw !== "A") return;
+  const prev = draft._open;
+  draft._open = prev === pid ? null : pid;
+  if(prev && prev !== pid) refreshSpRow(prev);
+  refreshSpRow(pid);
+}
+function setSpAnw(pid, v){
+  draft.spieler[pid].anw = v;
+  if(v !== "A" && draft._open === pid) draft._open = null;
+  refreshSpRow(pid);
+}
+function setSpBew(pid, n){
+  const s = draft.spieler[pid];
+  s.bew = (s.bew === n) ? 0 : n;
+  refreshSpRow(pid);
 }
 function stepRow(pid, k, label){
   const v = draft.spieler[pid][k];
@@ -336,7 +368,7 @@ function stp(pid, k, d){
 function tglCard(pid, k){
   const s = draft.spieler[pid];
   s[k] = s[k] ? 0 : 1;
-  render();
+  refreshSpRow(pid);
 }
 function spSummary(s){
   const parts = [];
@@ -351,7 +383,8 @@ function spSummary(s){
 
 /* ---------- Trainings-Formular ---------- */
 function newTraining(){
-  draft = {id:uid(), type:"training", date:today(), bewertung:0, gut:"", schlecht:"", spieler:{}};
+  draft = {id:uid(), type:"training", date:today(), bewertung:0, gut:"", schlecht:"", spieler:{},
+    uebungen:[blankUeb(), blankUeb(), blankUeb()]};
   activePlayers().forEach(p => draft.spieler[p.id] = {anw:"A", bew:0, notiz:""});
   go("training");
 }
@@ -370,6 +403,9 @@ function trainingForm(){
   <div class="card" id="trows">
     ${pids.map(pid => trainRow(pid)).join("")}
   </div>
+
+  <h2>Übungen <span class="muted">(max. ${MAX_UEB} · Sterne = wie gut hat sie funktioniert)</span></h2>
+  <div class="card" id="uebcard">${uebungenHtml()}</div>
 
   <h2>Trainingsfazit</h2>
   <div class="card">
@@ -419,6 +455,51 @@ function setGBew(n){
   render();
 }
 
+/* Übungen im Training (max. 9 Felder) */
+const MAX_UEB = 9;
+function blankUeb(){ return {name:"", bew:0, notiz:""}; }
+function uebNameSuggestions(){
+  const names = new Set();
+  if(typeof UNITS !== "undefined") UNITS.forEach(u => u.ex.forEach(e => names.add(e.name.replace(/^[0-9a-z]+ · /i, "").trim())));
+  state.events.forEach(ev => (ev.uebungen || []).forEach(u => { if(u.name) names.add(u.name); }));
+  return [...names].sort((a,b) => a.localeCompare(b, "de"));
+}
+function uebungenHtml(){
+  const list = draft.uebungen;
+  return `<datalist id="uebnames">${uebNameSuggestions().map(n => `<option value="${esc(n)}">`).join("")}</datalist>
+    ${list.map((u, i) => uebRow(i)).join("")}
+    ${list.length < MAX_UEB ? `<button class="btn ghost wide" onclick="addUeb()">+ Übung hinzufügen (${list.length}/${MAX_UEB})</button>` : `<div class="muted" style="text-align:center;margin-top:8px">Maximal ${MAX_UEB} Übungen erreicht</div>`}`;
+}
+function uebRow(i){
+  const u = draft.uebungen[i];
+  return `<div class="prow" id="ueb-${i}">
+    <div class="row">
+      <input type="text" list="uebnames" placeholder="Übung ${i+1}" value="${esc(u.name)}" oninput="draft.uebungen[${i}].name=this.value">
+      <button class="btn danger small" style="flex:0 0 auto" onclick="delUeb(${i})" aria-label="Übung entfernen">✕</button>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <div class="stars" style="flex:0 0 auto">${[1,2,3,4,5].map(n =>
+        `<button class="${u.bew >= n ? 'on' : ''}" onclick="setUebBew(${i},${n})">★</button>`).join("")}</div>
+      <input type="text" placeholder="Wie hat's funktioniert? (optional)" value="${esc(u.notiz)}" oninput="draft.uebungen[${i}].notiz=this.value" style="flex:1">
+    </div>
+  </div>`;
+}
+function refreshUeb(){ document.getElementById("uebcard").innerHTML = uebungenHtml(); }
+function addUeb(){
+  if(draft.uebungen.length >= MAX_UEB) return;
+  draft.uebungen.push(blankUeb());
+  refreshUeb();
+}
+function delUeb(i){
+  draft.uebungen.splice(i, 1);
+  refreshUeb();
+}
+function setUebBew(i, n){
+  const u = draft.uebungen[i];
+  u.bew = (u.bew === n) ? 0 : n;
+  document.getElementById(`ueb-${i}`).outerHTML = uebRow(i);
+}
+
 /* ---------- Speichern / Bearbeiten ---------- */
 function editEvent(id){
   const ev = state.events.find(e => e.id === id);
@@ -426,12 +507,20 @@ function editEvent(id){
   activePlayers().forEach(p => {
     if(!draft.spieler[p.id]) draft.spieler[p.id] = ev.type === "spiel" ? blankSp() : {anw:"A", bew:0, notiz:""};
   });
+  if(ev.type === "spiel"){
+    // ältere Spiele ohne Anwesenheit/Bewertung ergänzen
+    Object.values(draft.spieler).forEach(s => { if(!s.anw) s.anw = "A"; if(s.bew == null) s.bew = 0; if(s.notiz == null) s.notiz = ""; });
+  } else {
+    if(!draft.uebungen) draft.uebungen = [];
+    while(draft.uebungen.length < 3) draft.uebungen.push(blankUeb());
+  }
   go(ev.type === "spiel" ? "spiel" : "training");
 }
 function saveDraft(){
   if(!draft.date){ toast("Bitte Datum angeben"); return; }
   if(draft.type === "spiel" && !draft.gegner.trim()){ toast("Bitte Gegner angeben"); return; }
   delete draft._open;
+  if(draft.type === "training") draft.uebungen = (draft.uebungen || []).filter(u => u.name.trim());
   const i = state.events.findIndex(e => e.id === draft.id);
   if(i >= 0) state.events[i] = draft; else state.events.push(draft);
   persist();
@@ -457,6 +546,12 @@ function mdSpiel(ev){
 | **Ergebnis** | ${erg} |
 `;
   if(hz) md += `| **Halbzeit** | ${hz} |\n`;
+  if(Object.values(ev.spieler).some(s => s.anw)){
+    const groups = groupAnw(ev, false);
+    md += `| **Anwesend** | ${groups.A.length} von ${Object.keys(ev.spieler).length} |\n`;
+    md += `\n---\n\n## ✅ Anwesenheit\n\n` + mdAnwLines(groups);
+    md += `\n---\n\n## ⭐ Spielerinnen-Bewertung\n\n` + mdBewTable(groups.A);
+  }
   md += `\n---\n\n## 📊 Spielerinnen-Statistik\n\n`;
   const rows = Object.entries(ev.spieler)
     .map(([pid, s]) => ({name: playerName(pid), s}))
@@ -482,9 +577,30 @@ function mdSpiel(ev){
   md += `\n---\n\n*Erstellt mit Handball-Tracker am ${fmtDateShort(today())}*\n`;
   return md;
 }
-function mdTraining(ev){
+function groupAnw(ev, fallbackU){
   const groups = {A: [], E: [], U: []};
-  Object.entries(ev.spieler).forEach(([pid, s]) => { (groups[s.anw] || groups.U).push({name: playerName(pid), s}); });
+  Object.entries(ev.spieler).forEach(([pid, s]) => {
+    const g = groups[s.anw] || (fallbackU ? groups.U : null);
+    if(g) g.push({name: playerName(pid), s});
+  });
+  return groups;
+}
+function mdAnwLines(groups){
+  return `- **Anwesend (${groups.A.length}):** ${groups.A.map(r => r.name).join(", ") || "–"}\n`
+    + `- **Entschuldigt (${groups.E.length}):** ${groups.E.map(r => r.name).join(", ") || "–"}\n`
+    + `- **Unentschuldigt (${groups.U.length}):** ${groups.U.map(r => r.name).join(", ") || "–"}\n`;
+}
+function mdBewTable(anwesend){
+  const bewertete = anwesend.filter(r => r.s.bew || r.s.notiz);
+  if(!bewertete.length) return `*Keine Einzelbewertungen erfasst.*\n`;
+  let md = `| Spielerin | Bewertung | Notiz |\n|---|---|---|\n`;
+  bewertete.forEach(r => {
+    md += `| ${mdName(r.name)} | ${r.s.bew ? stars(r.s.bew) + ` (${r.s.bew})` : "–"} | ${mdName(r.s.notiz) || "–"} |\n`;
+  });
+  return md;
+}
+function mdTraining(ev){
+  const groups = groupAnw(ev, true);
   const gesamt = Object.keys(ev.spieler).length;
   let md = `# 🏋️ Training: ${fmtDate(ev.date)}
 
@@ -500,23 +616,25 @@ function mdTraining(ev){
 
 ## ✅ Anwesenheit
 
-- **Anwesend (${groups.A.length}):** ${groups.A.map(r => r.name).join(", ") || "–"}
-- **Entschuldigt (${groups.E.length}):** ${groups.E.map(r => r.name).join(", ") || "–"}
-- **Unentschuldigt (${groups.U.length}):** ${groups.U.map(r => r.name).join(", ") || "–"}
-
+${mdAnwLines(groups)}
 ---
 
 ## ⭐ Spielerinnen-Bewertung
 
+${mdBewTable(groups.A)}
+---
+
+## 🏃 Übungen
+
 `;
-  const bewertete = groups.A.filter(r => r.s.bew || r.s.notiz);
-  if(bewertete.length){
-    md += `| Spielerin | Bewertung | Notiz |\n|---|---|---|\n`;
-    bewertete.forEach(r => {
-      md += `| ${mdName(r.name)} | ${r.s.bew ? stars(r.s.bew) + ` (${r.s.bew})` : "–"} | ${mdName(r.s.notiz) || "–"} |\n`;
+  const ueb = ev.uebungen || [];
+  if(ueb.length){
+    md += `| # | Übung | Wie hat's funktioniert? | Notiz |\n|---|---|---|---|\n`;
+    ueb.forEach((u, i) => {
+      md += `| ${i+1} | ${mdName(u.name)} | ${u.bew ? stars(u.bew) + ` (${u.bew})` : "–"} | ${mdName(u.notiz) || "–"} |\n`;
     });
   } else {
-    md += `*Keine Einzelbewertungen erfasst.*\n`;
+    md += `*Keine Übungen erfasst.*\n`;
   }
   md += `\n---\n\n## 📝 Trainingsfazit\n\n`;
   md += `- **Was lief gut:** ${ev.gut || "–"}\n`;
@@ -925,6 +1043,28 @@ function statsView(){
     });
     html += `</table>`;
   } else html += `<div class="muted">Noch keine Spieldaten.</div>`;
+  html += `</div>`;
+
+  // Spielbeteiligung & Bewertung (nur Spiele mit erfasster Anwesenheit)
+  const bstat = {};
+  games.forEach(g => Object.entries(g.spieler || {}).forEach(([pid, sp]) => {
+    if(!sp.anw) return;
+    if(!bstat[pid]) bstat[pid] = {da:0, ges:0, bewSum:0, bewN:0};
+    const x = bstat[pid];
+    x.ges++;
+    if(sp.anw === "A"){ x.da++; if(sp.bew){ x.bewSum += sp.bew; x.bewN++; } }
+  }));
+  const brows = Object.entries(bstat).sort((a,b) => (b[1].da / b[1].ges) - (a[1].da / a[1].ges));
+  html += `<h2>Spielbeteiligung</h2><div class="card scroll-x">`;
+  if(brows.length){
+    html += `<table><tr><th>Spielerin</th><th>Anwesend</th><th>Quote</th><th>Ø Bewertung</th></tr>`;
+    brows.forEach(([pid, x]) => {
+      const q = Math.round(100 * x.da / x.ges);
+      const avg = x.bewN ? (x.bewSum / x.bewN).toFixed(1) : "–";
+      html += `<tr><td>${esc(playerName(pid))}</td><td>${x.da}/${x.ges}</td><td><b>${q}%</b></td><td>${avg}</td></tr>`;
+    });
+    html += `</table>`;
+  } else html += `<div class="muted">Noch keine Anwesenheit bei Spielen erfasst.</div>`;
   html += `</div>`;
 
   // Trainingsstatistik

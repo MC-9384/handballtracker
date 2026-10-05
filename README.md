@@ -4,10 +4,10 @@ PWA zum Erfassen von Spielergebnissen (Torschützinnen, 7-Meter, Strafen) und Tr
 
 ## Funktionen
 
-- **Spiele:** Gegner, Heim/Auswärts, Ergebnis (+ Halbzeit), pro Spielerin Feldtore, 7m verwandelt/verworfen, 2-Minuten-Strafen, gelbe/rote Karten, Notizen (beste Spielerinnen, was lief gut, Verbesserungspunkte, Fazit)
-- **Trainings:** Anwesenheit (da / entschuldigt / unentschuldigt), Bewertung 1–5 Sterne + Notiz pro Spielerin, Gesamtbewertung des Trainings
+- **Spiele:** Gegner, Heim/Auswärts, Ergebnis (+ Halbzeit), pro Spielerin Anwesenheit (da / entschuldigt / unentschuldigt), Bewertung 1–5 Sterne + Notiz, Feldtore, 7m verwandelt/verworfen, 2-Minuten-Strafen, gelbe/rote Karten, Notizen (beste Spielerinnen, was lief gut, Verbesserungspunkte, Fazit)
+- **Trainings:** Anwesenheit (da / entschuldigt / unentschuldigt), Bewertung 1–5 Sterne + Notiz pro Spielerin, bis zu 9 durchgeführte Übungen (Name mit Vorschlägen, 1–5 Sterne „wie hat's funktioniert", Notiz), Gesamtbewertung des Trainings
 - **MD-Export:** pro Ereignis über den 📄-Button — auf dem Handy per Teilen-Dialog, sonst als Download
-- **Statistik:** Saison-Bilanz, Torschützinnenliste, Trainingsbeteiligung mit Ø-Bewertung
+- **Statistik:** Saison-Bilanz, Torschützinnenliste, Spiel- und Trainingsbeteiligung mit Ø-Bewertung
 - **Kader:** Spielerinnen hinzufügen, umbenennen, deaktivieren (vorbefüllt mit dem aktuellen Kader)
 - **Backup:** Alle Daten liegen im localStorage des Geräts; JSON-Export/-Import unter „Kader → Daten"
 
